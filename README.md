@@ -1,5 +1,5 @@
 TaskPilot - Advanced Task Management System
-https://via.placeholder.com/800x400?text=TaskPilot+Dashboard+Screenshot
+
 
 TaskPilot is a modern, feature-rich task management application designed to help individuals and teams organize their work efficiently. With a sleek UI, powerful task organization features, and seamless user experience, TaskPilot takes productivity to the next level.
 
@@ -46,7 +46,7 @@ JWT Authentication
 Bcrypt
 
 Local Setup Instructions
-Follow these steps to set up TaskPilot on your local machine:
+Follow these steps to set up TaskPilot on my local machine:
 
 Prerequisites
 Node.js v16+
@@ -69,9 +69,7 @@ Set up environment variables
 Create a .env file in the backend directory with:
 
 env
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret_key
-PORT=5000
+MONGO_URI=mongodb+srv://nyumaeric:Eric%402002@cluster0.huob0.mongodb.net/?retryWrites=true&w=majority
 Start the backend server
 
 bash
