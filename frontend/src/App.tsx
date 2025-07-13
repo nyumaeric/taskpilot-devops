@@ -4,3 +4,9 @@ import TaskManager from './components/TaskManager'; // Update this path if your 
 export default function App() {
   return <TaskManager />;
 }
+
+<img
+  src="/images/task-hero.png"
+  alt="TaskPilot Banner"
+  className="w-full max-w-2xl mx-auto mb-4 rounded"
+/>
