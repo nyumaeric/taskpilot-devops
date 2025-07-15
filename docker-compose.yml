@@ -1,31 +1,14 @@
-version: "3.8"
+version: '3.8'
 
 services:
-  mongo:
-    image: mongo
-    container_name: mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-
   backend:
     build: ./backend
-    container_name: taskpilot-backend
     ports:
       - "5000:5000"
-    environment:
-      - MONGO_URI=mongodb://mongo:27017/taskpilot
-    depends_on:
-      - mongo
+    env_file:
+      - .env
 
   frontend:
     build: ./frontend
-    container_name: taskpilot-frontend
     ports:
       - "3000:80"
-    depends_on:
-      - backend
-
-volumes:
-  mongo-data:
