@@ -45,60 +45,79 @@ JWT Authentication
 
 Bcrypt
 
-Local Setup Instructions
-Follow these steps to set up TaskPilot on my local machine:
+## Setup Instructions
 
-Prerequisites
-Node.js v16+
+TaskPilot can be run in multiple ways. Choose the method that best fits your needs:
 
-npm v8+
+### 🐳 Docker Setup (Recommended)
 
-MongoDB
+**Prerequisites:**
+- Docker
+- Docker Compose
 
-Backend Setup
-Clone the repository
-
-bash
+**Quick Start:**
+```bash
+# Clone the repository
 git clone https://github.com/nyumaeric/taskpilot-devops.git
-cd taskpilot-devops/backend
-Install dependencies
+cd taskpilot-devops
 
-bash
+# Start all services with docker-compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+**Access the application:**
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:3000
+- MongoDB: localhost:27017
+
+**Build images separately:**
+```bash
+# Build backend image
+docker build -t taskpilot-backend ./backend
+
+# Build frontend image  
+docker build -t taskpilot-frontend ./frontend
+```
+
+### 💻 Local Development Setup
+
+**Prerequisites:**
+- Node.js 18+ (frontend requires Node 20+ for Vite 7)
+- npm v8+
+- MongoDB
+
+**Backend Setup:**
+```bash
+cd backend
 npm install
-Set up environment variables
-Create a .env file in the backend directory with:
 
-env
-MONGO_URI=mongodb+srv://nyumaeric:Eric%402002@cluster0.huob0.mongodb.net/?retryWrites=true&w=majority
-Start the backend server
+# Create .env file
+echo "MONGO_URI=mongodb://localhost:27017/taskpilot" > .env
+echo "PORT=3000" >> .env
 
-bash
 npm start
-# or for development
+```
+
+**Frontend Setup:**
+```bash
+cd frontend  
+npm install
+
+# Create .env file
+echo "REACT_APP_API_URL=http://localhost:3000" > .env
+
 npm run dev
-Frontend Setup
-Navigate to frontend directory
+```
 
-bash
-cd ../frontend
-Install dependencies
-
-bash
-npm install
-Configure API base URL
-Create a .env file in the frontend directory with:
-
-env
-REACT_APP_API_BASE_URL=http://localhost:5000
-Start the frontend development server
-
-bash
-npm start
-Access the application
-Open your browser and visit:
-
-text
-http://localhost:3000
+**Access the application:**
+- Frontend: http://localhost:5173
+- Backend: http://localhost:3000
 Environment Variables
 Backend (.env)
 Variable	Description	Example
@@ -108,32 +127,65 @@ PORT	Port for backend server	5000
 Frontend (.env)
 Variable	Description	Example
 REACT_APP_API_BASE_URL	Base URL for API requests	http://localhost:5000
-Deployment
-TaskPilot can be deployed using various platforms:
+## 🚀 Cloud Deployment
 
-Backend Deployment
-Create a production build:
+TaskPilot includes Infrastructure as Code (IaC) with Terraform for Azure deployment.
 
-bash
-npm run build
-Use process managers like PM2:
+### Azure Infrastructure
 
-bash
-pm2 start server.js
-Frontend Deployment
-Create a production build:
+**Prerequisites:**
+- Azure CLI
+- Terraform
+- Docker
 
-bash
-npm run build
-Deploy the build directory to:
+**Deploy Infrastructure:**
+```bash
+cd infra
 
-Vercel
+# Initialize Terraform
+terraform init
 
-Netlify
+# Plan the deployment
+terraform plan
 
-AWS S3
+# Apply the infrastructure
+terraform apply
 
-Firebase Hosting
+# Get outputs
+terraform output
+```
+
+**Infrastructure includes:**
+- Azure Container Registry (ACR)
+- Azure Container Apps
+- Azure Cosmos DB (MongoDB API)
+- Log Analytics Workspace
+- Resource Group
+
+**Manual Deployment Process:**
+1. Build and tag images:
+```bash
+# Get ACR login server from terraform output
+ACR_SERVER=$(terraform output -raw container_registry_login_server)
+
+# Tag images
+docker tag taskpilot-backend:latest $ACR_SERVER/taskpilot-backend:latest
+docker tag taskpilot-frontend:latest $ACR_SERVER/taskpilot-frontend:latest
+
+# Login to ACR
+az acr login --name $ACR_SERVER
+
+# Push images
+docker push $ACR_SERVER/taskpilot-backend:latest
+docker push $ACR_SERVER/taskpilot-frontend:latest
+```
+
+2. The Container Apps will automatically deploy the latest images from ACR.
+
+**Alternative Deployment Platforms:**
+- **Frontend**: Vercel, Netlify, AWS S3, Firebase Hosting
+- **Backend**: Heroku, Railway, AWS Elastic Beanstalk
+- **Database**: MongoDB Atlas, AWS DocumentDB
 
 Contributing
 We welcome contributions! Please follow these steps:

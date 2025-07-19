@@ -14,6 +14,14 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB Connected'))
   .catch(err => console.log(err));
 
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 const taskRoutes = require('./routes/taskRoutes');
 app.use('/api/tasks', taskRoutes);
 

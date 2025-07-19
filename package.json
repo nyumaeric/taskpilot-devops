@@ -3,6 +3,7 @@
     "vite-plugin-node-polyfills": "^0.24.0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.56.0",
     "crypto-browserify": "^3.12.1",
     "stream-browserify": "^3.0.0"
   }

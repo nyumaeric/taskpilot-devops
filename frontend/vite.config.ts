@@ -1,4 +1,3 @@
-import './polyfill-crypto';  // <-- add this at the very top
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
