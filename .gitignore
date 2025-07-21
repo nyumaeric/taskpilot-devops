@@ -3,3 +3,4 @@
 *.tfstate.backup
 *.pem
 node_modules/
+.claude/
