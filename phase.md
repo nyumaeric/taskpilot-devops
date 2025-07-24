@@ -1,5 +1,10 @@
 # TaskPilot DevOps Phase - Containerization & Infrastructure as Code
 
+## 🌐 Live Deployment
+
+**Public Application URL**:  
+https://taskpilot.azurewebsites.net/
+
 ## 🎯 Project Overview
 
 TaskPilot is a modern full-stack task management application that has been successfully containerized and deployed using Infrastructure as Code (IaC) principles. This phase demonstrates enterprise-grade DevOps practices including containerization, infrastructure provisioning, and automated deployment.
