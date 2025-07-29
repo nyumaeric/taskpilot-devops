@@ -1,0 +1,18 @@
+name: Monitoring Health Check
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Runs every 5 minutes
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Health Endpoint
+        uses: jtalk/url-health-check-action@v4
+        with:
+          url: 'https://your-app-url/api/health'
+          max-attempts: 3
+          retry-delay: 10s
+

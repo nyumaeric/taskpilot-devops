@@ -1,0 +1,39 @@
+name: Security Scanning Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Static Application Security Testing
+      - name: CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+      # Dependency Vulnerability Scanning
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Safety
+        run: pip install safety
+      - name: Safety Check
+        run: safety check --json
+
+      # Container Security Scanning
+      - name: Trivy Scan
+        uses: aquasecurity/trivy-action@master
+
+      # Secrets Detection
+      - name: TruffleHog Scan
+        uses: trufflesecurity/trufflehog@main
+
+      # Infrastructure Security
+      - name: Checkov Scan
+        uses: bridgecrewio/checkov-action@master
