@@ -11,7 +11,7 @@ We release security updates for the latest major and minor versions. Please ensu
 ## Reporting a Vulnerability
 If you discover a security vulnerability, **please do not open a public issue**. Instead, report it confidentially:
 
-- Email: [e.nyumajr@alustudent.com](mailto:e.nyumajr@alustudent.com)
+- Email: [e.nyumaj@alustudent.com](mailto:e.nyumajr@alustudent.com)
 - Or use our [private security issue form](https://github.com/your-org/your-repo/security/advisories/new)
 
 We will respond within 3 business days and work with you to resolve the issue promptly.
