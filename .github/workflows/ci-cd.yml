@@ -7,9 +7,12 @@ on:
     branches: [main]
 
 env:
-  REGISTRY: taskpilot.azurecr.io
+  REGISTRY: taskpilotacrvtzg5w.azurecr.io
   BACKEND_IMAGE: taskpilot-backend
   FRONTEND_IMAGE: taskpilot-frontend
+  RESOURCE_GROUP: taskpilot-rg-vtzg5w
+  BACKEND_CONTAINER_APP: taskpilot-backend
+  FRONTEND_CONTAINER_APP: taskpilot-frontend
 
 jobs:
   test:
@@ -206,7 +209,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     environment:
       name: production
-      url: https://taskpilot.azurewebsites.net
+      url: https://taskpilot-frontend.gentlewater-aa6fe06f.eastus2.azurecontainerapps.io
     steps:
       - name: Await Manual Approval
         uses: trstringer/manual-approval@v1
@@ -228,17 +231,21 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy backend to Azure Web App
-        uses: azure/webapps-deploy@v2
+      - name: Deploy backend to Azure Container Apps
+        uses: azure/container-apps-deploy-action@v2
         with:
-          app-name: 'taskpilot-webapp'
-          images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:production-latest
+          acrName: ${{ env.REGISTRY }}
+          containerAppName: ${{ env.BACKEND_CONTAINER_APP }}
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          imageToDeploy: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:production-latest
 
-      - name: Deploy frontend to Azure Web App
-        uses: azure/webapps-deploy@v2
+      - name: Deploy frontend to Azure Container Apps
+        uses: azure/container-apps-deploy-action@v2
         with:
-          app-name: 'taskpilot'
-          images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:production-latest
+          acrName: ${{ env.REGISTRY }}
+          containerAppName: ${{ env.FRONTEND_CONTAINER_APP }}
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          imageToDeploy: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:production-latest
 
   monitor:
     name: Post-Deployment Monitoring
@@ -246,7 +253,8 @@ jobs:
     needs: [deploy-staging, deploy-production]
     if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
     steps:
-      - name: Health Check - Frontend
+      - name: Health Check - Staging Frontend
+        if: needs.deploy-staging.result == 'success'
         uses: jtalk/url-health-check-action@v4
         with:
           url: 'https://taskpilot.azurewebsites.net'
@@ -254,10 +262,29 @@ jobs:
           retry-delay: 10s
           follow-redirect: true
 
-      - name: Health Check - Backend
+      - name: Health Check - Staging Backend
+        if: needs.deploy-staging.result == 'success'
         uses: jtalk/url-health-check-action@v4
         with:
           url: 'https://taskpilot-webapp.azurewebsites.net/health'
+          max-attempts: 3
+          retry-delay: 10s
+          follow-redirect: true
+
+      - name: Health Check - Production Frontend
+        if: needs.deploy-production.result == 'success'
+        uses: jtalk/url-health-check-action@v4
+        with:
+          url: 'https://taskpilot-frontend.gentlewater-aa6fe06f.eastus2.azurecontainerapps.io'
+          max-attempts: 3
+          retry-delay: 10s
+          follow-redirect: true
+
+      - name: Health Check - Production Backend
+        if: needs.deploy-production.result == 'success'
+        uses: jtalk/url-health-check-action@v4
+        with:
+          url: 'https://taskpilot-backend.gentlewater-aa6fe06f.eastus2.azurecontainerapps.io/health'
           max-attempts: 3
           retry-delay: 10s
           follow-redirect: true
