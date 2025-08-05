@@ -1,0 +1,3 @@
+Pipeline test file - created to trigger CI/CD pipeline
+Timestamp: 2025-08-05T11:15:00Z
+Testing authentication improvements with Azure CLI login
