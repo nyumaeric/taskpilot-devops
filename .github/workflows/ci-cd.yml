@@ -127,27 +127,27 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Get ACR login token and login to Docker
+      # Get ACR access tokens and set as environment variables
+      - name: Get ACR Access Tokens
+        run: |
+          echo "STAGING_ACR_TOKEN=$(az acr credential show --name taskpilot --query 'passwords[0].value' -o tsv)" >> $GITHUB_ENV
+          echo "PRODUCTION_ACR_TOKEN=$(az acr credential show --name taskpilotacrvtzg5w --query 'passwords[0].value' -o tsv)" >> $GITHUB_ENV
+
+      # Login to Staging Registry using Docker Login Action
       - name: Login to Staging Azure Container Registry
-        run: |
-          STAGING_TOKEN=$(az acr credential show --name taskpilot --query "passwords[0].value" -o tsv)
-          echo $STAGING_TOKEN | docker login ${{ env.STAGING_REGISTRY }} --username taskpilot --password-stdin
-          echo "✅ Logged into staging registry: ${{ env.STAGING_REGISTRY }}"
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.STAGING_REGISTRY }}
+          username: taskpilot
+          password: ${{ env.STAGING_ACR_TOKEN }}
 
-      # Login to Production Registry using Docker login with ACR credentials
+      # Login to Production Registry using Docker Login Action
       - name: Login to Production Azure Container Registry
-        run: |
-          PRODUCTION_TOKEN=$(az acr credential show --name taskpilotacrvtzg5w --query "passwords[0].value" -o tsv)
-          echo $PRODUCTION_TOKEN | docker login ${{ env.PRODUCTION_REGISTRY }} --username taskpilotacrvtzg5w --password-stdin
-          echo "✅ Logged into production registry: ${{ env.PRODUCTION_REGISTRY }}"
-
-      # Verify Docker authentication
-      - name: Verify Docker Registry Authentication
-        run: |
-          echo "🔍 Verifying authentication to registries..."
-          docker system info | grep -i registry || echo "No registry info found"
-          echo "📋 Checking Docker config..."
-          cat ~/.docker/config.json | jq '.auths | keys' || echo "No auths found"
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.PRODUCTION_REGISTRY }}
+          username: taskpilotacrvtzg5w
+          password: ${{ env.PRODUCTION_ACR_TOKEN }}
 
       # Build and push backend image to staging registry
       - name: Extract metadata for backend (staging)
