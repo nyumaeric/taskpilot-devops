@@ -7,7 +7,8 @@ on:
     branches: [main]
 
 env:
-  REGISTRY: taskpilotacrvtzg5w.azurecr.io
+  STAGING_REGISTRY: taskpilot.azurecr.io
+  PRODUCTION_REGISTRY: taskpilotacrvtzg5w.azurecr.io
   BACKEND_IMAGE: taskpilot-backend
   FRONTEND_IMAGE: taskpilot-frontend
   RESOURCE_GROUP: taskpilot-rg-vtzg5w
@@ -90,8 +91,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, security]
     outputs:
-      backend-image: ${{ steps.meta-backend.outputs.tags }}
-      frontend-image: ${{ steps.meta-frontend.outputs.tags }}
+      backend-image-staging: ${{ steps.meta-backend-staging.outputs.tags }}
+      frontend-image-staging: ${{ steps.meta-frontend-staging.outputs.tags }}
+      backend-image-production: ${{ steps.meta-backend-production.outputs.tags }}
+      frontend-image-production: ${{ steps.meta-frontend-production.outputs.tags }}
     steps:
       - uses: actions/checkout@v4
 
@@ -100,49 +103,92 @@ jobs:
         with:
           driver-opts: image=moby/buildkit:buildx-stable-1
 
-      - name: Login to Azure Container Registry
+      # Login to Staging Registry
+      - name: Login to Staging Azure Container Registry
         uses: azure/docker-login@v1
         with:
-          login-server: ${{ env.REGISTRY }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+          login-server: ${{ env.STAGING_REGISTRY }}
+          username: ${{ secrets.STAGING_ACR_USERNAME }}
+          password: ${{ secrets.STAGING_ACR_PASSWORD }}
 
-      # Build and push backend image
-      - name: Extract metadata for backend
-        id: meta-backend
+      # Login to Production Registry  
+      - name: Login to Production Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.PRODUCTION_REGISTRY }}
+          username: ${{ secrets.PRODUCTION_ACR_USERNAME }}
+          password: ${{ secrets.PRODUCTION_ACR_PASSWORD }}
+
+      # Build and push backend image to staging registry
+      - name: Extract metadata for backend (staging)
+        id: meta-backend-staging
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}
+          images: ${{ env.STAGING_REGISTRY }}/${{ env.BACKEND_IMAGE }}
           tags: |
-            type=raw,value=staging-latest,enable=${{ github.ref != 'refs/heads/main' }}
-            type=raw,value=production-latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=staging-latest
 
-      - name: Build and push backend image
+      - name: Build and push backend image to staging
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           push: true
-          tags: ${{ steps.meta-backend.outputs.tags }}
-          labels: ${{ steps.meta-backend.outputs.labels }}
+          tags: ${{ steps.meta-backend-staging.outputs.tags }}
+          labels: ${{ steps.meta-backend-staging.outputs.labels }}
           platforms: linux/amd64
 
-      # Build and push frontend image  
-      - name: Extract metadata for frontend
-        id: meta-frontend
+      # Build and push frontend image to staging registry
+      - name: Extract metadata for frontend (staging)
+        id: meta-frontend-staging
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}
+          images: ${{ env.STAGING_REGISTRY }}/${{ env.FRONTEND_IMAGE }}
           tags: |
-            type=raw,value=staging-latest,enable=${{ github.ref != 'refs/heads/main' }}
-            type=raw,value=production-latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=staging-latest
 
-      - name: Build and push frontend image
+      - name: Build and push frontend image to staging
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
-          labels: ${{ steps.meta-frontend.outputs.labels }}
+          tags: ${{ steps.meta-frontend-staging.outputs.tags }}
+          labels: ${{ steps.meta-frontend-staging.outputs.labels }}
+          platforms: linux/amd64
+
+      # Build and push backend image to production registry
+      - name: Extract metadata for backend (production)
+        id: meta-backend-production
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.PRODUCTION_REGISTRY }}/${{ env.BACKEND_IMAGE }}
+          tags: |
+            type=raw,value=production-latest
+
+      - name: Build and push backend image to production
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta-backend-production.outputs.tags }}
+          labels: ${{ steps.meta-backend-production.outputs.labels }}
+          platforms: linux/amd64
+
+      # Build and push frontend image to production registry
+      - name: Extract metadata for frontend (production)
+        id: meta-frontend-production
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.PRODUCTION_REGISTRY }}/${{ env.FRONTEND_IMAGE }}
+          tags: |
+            type=raw,value=production-latest
+
+      - name: Build and push frontend image to production
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta-frontend-production.outputs.tags }}
+          labels: ${{ steps.meta-frontend-production.outputs.labels }}
           platforms: linux/amd64
 
   image-scan:
@@ -150,26 +196,47 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Login to Azure Container Registry
+      - name: Login to Staging Azure Container Registry
         uses: azure/docker-login@v1
         with:
-          login-server: ${{ env.REGISTRY }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+          login-server: ${{ env.STAGING_REGISTRY }}
+          username: ${{ secrets.STAGING_ACR_USERNAME }}
+          password: ${{ secrets.STAGING_ACR_PASSWORD }}
 
-      - name: Scan backend image
+      - name: Login to Production Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.PRODUCTION_REGISTRY }}
+          username: ${{ secrets.PRODUCTION_ACR_USERNAME }}
+          password: ${{ secrets.PRODUCTION_ACR_PASSWORD }}
+
+      - name: Scan staging backend image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:staging-latest
+          image-ref: ${{ env.STAGING_REGISTRY }}/${{ env.BACKEND_IMAGE }}:staging-latest
           format: 'sarif'
-          output: 'backend-trivy-results.sarif'
+          output: 'staging-backend-trivy-results.sarif'
 
-      - name: Scan frontend image
+      - name: Scan staging frontend image
         uses: aquasecurity/trivy-action@master  
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:staging-latest
+          image-ref: ${{ env.STAGING_REGISTRY }}/${{ env.FRONTEND_IMAGE }}:staging-latest
           format: 'sarif'
-          output: 'frontend-trivy-results.sarif'
+          output: 'staging-frontend-trivy-results.sarif'
+
+      - name: Scan production backend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.PRODUCTION_REGISTRY }}/${{ env.BACKEND_IMAGE }}:production-latest
+          format: 'sarif'
+          output: 'production-backend-trivy-results.sarif'
+
+      - name: Scan production frontend image
+        uses: aquasecurity/trivy-action@master  
+        with:
+          image-ref: ${{ env.PRODUCTION_REGISTRY }}/${{ env.FRONTEND_IMAGE }}:production-latest
+          format: 'sarif'
+          output: 'production-frontend-trivy-results.sarif'
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v2
@@ -194,13 +261,13 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: 'taskpilot-webapp'
-          images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:staging-latest
+          images: ${{ env.STAGING_REGISTRY }}/${{ env.BACKEND_IMAGE }}:staging-latest
 
       - name: Deploy frontend to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
           app-name: 'taskpilot'
-          images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:staging-latest
+          images: ${{ env.STAGING_REGISTRY }}/${{ env.FRONTEND_IMAGE }}:staging-latest
 
   deploy-production:
     name: Deploy to Production
@@ -219,8 +286,8 @@ jobs:
           issue-title: "Production Deployment Approval Required"
           issue-body: |
             **Deployment Details:**
-            - **Backend Image:** ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:production-latest
-            - **Frontend Image:** ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:production-latest
+            - **Backend Image:** ${{ env.PRODUCTION_REGISTRY }}/${{ env.BACKEND_IMAGE }}:production-latest
+            - **Frontend Image:** ${{ env.PRODUCTION_REGISTRY }}/${{ env.FRONTEND_IMAGE }}:production-latest
             - **Commit:** ${{ github.sha }}
             - **Branch:** ${{ github.ref_name }}
             
@@ -234,18 +301,18 @@ jobs:
       - name: Deploy backend to Azure Container Apps
         uses: azure/container-apps-deploy-action@v2
         with:
-          acrName: ${{ env.REGISTRY }}
+          acrName: ${{ env.PRODUCTION_REGISTRY }}
           containerAppName: ${{ env.BACKEND_CONTAINER_APP }}
           resourceGroup: ${{ env.RESOURCE_GROUP }}
-          imageToDeploy: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:production-latest
+          imageToDeploy: ${{ env.PRODUCTION_REGISTRY }}/${{ env.BACKEND_IMAGE }}:production-latest
 
       - name: Deploy frontend to Azure Container Apps
         uses: azure/container-apps-deploy-action@v2
         with:
-          acrName: ${{ env.REGISTRY }}
+          acrName: ${{ env.PRODUCTION_REGISTRY }}
           containerAppName: ${{ env.FRONTEND_CONTAINER_APP }}
           resourceGroup: ${{ env.RESOURCE_GROUP }}
-          imageToDeploy: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:production-latest
+          imageToDeploy: ${{ env.PRODUCTION_REGISTRY }}/${{ env.FRONTEND_IMAGE }}:production-latest
 
   monitor:
     name: Post-Deployment Monitoring
