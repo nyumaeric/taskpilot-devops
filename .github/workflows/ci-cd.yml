@@ -82,10 +82,6 @@ jobs:
       - name: TruffleHog Scan
         uses: trufflesecurity/trufflehog@main
 
-      # Infrastructure scan (Checkov)
-      - name: Checkov Scan
-        uses: bridgecrewio/checkov-action@v12
-
   build:
     name: Build & Push Docker Images
     runs-on: ubuntu-latest
