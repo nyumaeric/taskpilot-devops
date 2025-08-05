@@ -109,17 +109,27 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Login to Staging Registry using Azure CLI
+      # Get ACR login token and login to Docker
       - name: Login to Staging Azure Container Registry
         run: |
-          az acr login --name taskpilot
-          echo "Logged into staging registry: ${{ env.STAGING_REGISTRY }}"
+          STAGING_TOKEN=$(az acr credential show --name taskpilot --query "passwords[0].value" -o tsv)
+          echo $STAGING_TOKEN | docker login ${{ env.STAGING_REGISTRY }} --username taskpilot --password-stdin
+          echo "✅ Logged into staging registry: ${{ env.STAGING_REGISTRY }}"
 
-      # Login to Production Registry using Azure CLI
+      # Login to Production Registry using Docker login with ACR credentials
       - name: Login to Production Azure Container Registry
         run: |
-          az acr login --name taskpilotacrvtzg5w
-          echo "Logged into production registry: ${{ env.PRODUCTION_REGISTRY }}"
+          PRODUCTION_TOKEN=$(az acr credential show --name taskpilotacrvtzg5w --query "passwords[0].value" -o tsv)
+          echo $PRODUCTION_TOKEN | docker login ${{ env.PRODUCTION_REGISTRY }} --username taskpilotacrvtzg5w --password-stdin
+          echo "✅ Logged into production registry: ${{ env.PRODUCTION_REGISTRY }}"
+
+      # Verify Docker authentication
+      - name: Verify Docker Registry Authentication
+        run: |
+          echo "🔍 Verifying authentication to registries..."
+          docker system info | grep -i registry || echo "No registry info found"
+          echo "📋 Checking Docker config..."
+          cat ~/.docker/config.json | jq '.auths | keys' || echo "No auths found"
 
       # Build and push backend image to staging registry
       - name: Extract metadata for backend (staging)
@@ -204,10 +214,14 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Login to Staging Azure Container Registry
-        run: az acr login --name taskpilot
+        run: |
+          STAGING_TOKEN=$(az acr credential show --name taskpilot --query "passwords[0].value" -o tsv)
+          echo $STAGING_TOKEN | docker login ${{ env.STAGING_REGISTRY }} --username taskpilot --password-stdin
 
       - name: Login to Production Azure Container Registry
-        run: az acr login --name taskpilotacrvtzg5w
+        run: |
+          PRODUCTION_TOKEN=$(az acr credential show --name taskpilotacrvtzg5w --query "passwords[0].value" -o tsv)
+          echo $PRODUCTION_TOKEN | docker login ${{ env.PRODUCTION_REGISTRY }} --username taskpilotacrvtzg5w --password-stdin
 
       - name: Scan staging backend image
         uses: aquasecurity/trivy-action@master
