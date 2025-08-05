@@ -114,8 +114,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}
           tags: |
-            type=raw,value=staging-latest,enable={{is_default_branch == false}}
-            type=raw,value=production-latest,enable={{is_default_branch}}
+            type=raw,value=staging-latest,enable=${{ github.ref != 'refs/heads/main' }}
+            type=raw,value=production-latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push backend image
         uses: docker/build-push-action@v5
@@ -133,8 +133,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}
           tags: |
-            type=raw,value=staging-latest,enable={{is_default_branch == false}}
-            type=raw,value=production-latest,enable={{is_default_branch}}
+            type=raw,value=staging-latest,enable=${{ github.ref != 'refs/heads/main' }}
+            type=raw,value=production-latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v5
