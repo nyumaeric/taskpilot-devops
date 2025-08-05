@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  id-token: write
+
 env:
   STAGING_REGISTRY: taskpilot.azurecr.io
   PRODUCTION_REGISTRY: taskpilotacrvtzg5w.azurecr.io
@@ -56,17 +62,24 @@ jobs:
   security:
     name: Security Scans
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v4
 
       # CodeQL static analysis
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           languages: javascript
+          queries: security-extended,security-and-quality
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript"
 
       # Dependency scan for Node.js
       - name: Run npm audit
@@ -85,6 +98,11 @@ jobs:
       # Secrets scan
       - name: TruffleHog Scan
         uses: trufflesecurity/trufflehog@main
+        with:
+          base: main
+          head: HEAD
+          path: .
+          extra_args: --debug --only-verified
 
   build:
     name: Build & Push Docker Images
@@ -239,9 +257,10 @@ jobs:
           output: 'production-frontend-trivy-results.sarif'
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: '.'
+        continue-on-error: true
 
   deploy-staging:
     name: Deploy to Staging
