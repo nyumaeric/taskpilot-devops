@@ -111,10 +111,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=staging-latest,enable={{is_default_branch == false}}
+            type=raw,value=production-latest,enable={{is_default_branch}}
 
       - name: Build and push backend image
         uses: docker/build-push-action@v5
@@ -132,10 +130,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=staging-latest,enable={{is_default_branch == false}}
+            type=raw,value=production-latest,enable={{is_default_branch}}
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v5
@@ -161,14 +157,14 @@ jobs:
       - name: Scan backend image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:staging-latest
           format: 'sarif'
           output: 'backend-trivy-results.sarif'
 
       - name: Scan frontend image
         uses: aquasecurity/trivy-action@master  
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:staging-latest
           format: 'sarif'
           output: 'frontend-trivy-results.sarif'
 
@@ -195,13 +191,13 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: 'taskpilot-webapp'
-          images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:staging-latest
 
       - name: Deploy frontend to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
           app-name: 'taskpilot'
-          images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:staging-latest
 
   deploy-production:
     name: Deploy to Production
@@ -220,8 +216,8 @@ jobs:
           issue-title: "Production Deployment Approval Required"
           issue-body: |
             **Deployment Details:**
-            - **Backend Image:** ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-            - **Frontend Image:** ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+            - **Backend Image:** ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:production-latest
+            - **Frontend Image:** ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:production-latest
             - **Commit:** ${{ github.sha }}
             - **Branch:** ${{ github.ref_name }}
             
@@ -236,13 +232,13 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: 'taskpilot-webapp'
-          images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:production-latest
 
       - name: Deploy frontend to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
           app-name: 'taskpilot'
-          images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:production-latest
 
   monitor:
     name: Post-Deployment Monitoring
