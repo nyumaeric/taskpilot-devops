@@ -103,21 +103,23 @@ jobs:
         with:
           driver-opts: image=moby/buildkit:buildx-stable-1
 
-      # Login to Staging Registry
-      - name: Login to Staging Azure Container Registry
-        uses: azure/docker-login@v1
+      # Login to Azure CLI first
+      - name: Login to Azure
+        uses: azure/login@v1
         with:
-          login-server: ${{ env.STAGING_REGISTRY }}
-          username: ${{ secrets.STAGING_ACR_USERNAME }}
-          password: ${{ secrets.STAGING_ACR_PASSWORD }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Login to Production Registry  
+      # Login to Staging Registry using Azure CLI
+      - name: Login to Staging Azure Container Registry
+        run: |
+          az acr login --name taskpilot
+          echo "Logged into staging registry: ${{ env.STAGING_REGISTRY }}"
+
+      # Login to Production Registry using Azure CLI
       - name: Login to Production Azure Container Registry
-        uses: azure/docker-login@v1
-        with:
-          login-server: ${{ env.PRODUCTION_REGISTRY }}
-          username: ${{ secrets.PRODUCTION_ACR_USERNAME }}
-          password: ${{ secrets.PRODUCTION_ACR_PASSWORD }}
+        run: |
+          az acr login --name taskpilotacrvtzg5w
+          echo "Logged into production registry: ${{ env.PRODUCTION_REGISTRY }}"
 
       # Build and push backend image to staging registry
       - name: Extract metadata for backend (staging)
@@ -196,19 +198,16 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Login to Staging Azure Container Registry
-        uses: azure/docker-login@v1
+      - name: Login to Azure
+        uses: azure/login@v1
         with:
-          login-server: ${{ env.STAGING_REGISTRY }}
-          username: ${{ secrets.STAGING_ACR_USERNAME }}
-          password: ${{ secrets.STAGING_ACR_PASSWORD }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Staging Azure Container Registry
+        run: az acr login --name taskpilot
 
       - name: Login to Production Azure Container Registry
-        uses: azure/docker-login@v1
-        with:
-          login-server: ${{ env.PRODUCTION_REGISTRY }}
-          username: ${{ secrets.PRODUCTION_ACR_USERNAME }}
-          password: ${{ secrets.PRODUCTION_ACR_PASSWORD }}
+        run: az acr login --name taskpilotacrvtzg5w
 
       - name: Scan staging backend image
         uses: aquasecurity/trivy-action@master
