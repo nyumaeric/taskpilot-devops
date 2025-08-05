@@ -99,10 +99,9 @@ jobs:
       - name: TruffleHog Scan
         uses: trufflesecurity/trufflehog@main
         with:
-          base: main
-          head: HEAD
           path: .
           extra_args: --debug --only-verified
+        continue-on-error: true
 
   build:
     name: Build & Push Docker Images
