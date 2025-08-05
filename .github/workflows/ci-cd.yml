@@ -11,6 +11,8 @@ permissions:
   security-events: write
   actions: read
   id-token: write
+  issues: write
+  pull-requests: write
 
 env:
   STAGING_REGISTRY: taskpilot.azurecr.io
@@ -305,6 +307,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build, image-scan]
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      issues: write
+      actions: read
     environment:
       name: production
       url: https://taskpilot-frontend.gentlewater-aa6fe06f.eastus2.azurecontainerapps.io
@@ -314,15 +320,29 @@ jobs:
         with:
           secret: ${{ secrets.GITHUB_TOKEN }}
           approvers: ${{ github.repository_owner }}
-          issue-title: "Production Deployment Approval Required"
+          minimum-approvals: 1
+          issue-title: "🚀 Production Deployment Approval Required"
           issue-body: |
-            **Deployment Details:**
-            - **Backend Image:** ${{ env.PRODUCTION_REGISTRY }}/${{ env.BACKEND_IMAGE }}:production-latest
-            - **Frontend Image:** ${{ env.PRODUCTION_REGISTRY }}/${{ env.FRONTEND_IMAGE }}:production-latest
-            - **Commit:** ${{ github.sha }}
-            - **Branch:** ${{ github.ref_name }}
+            ## Production Deployment Request
             
-            Please review and approve this production deployment.
+            **📋 Deployment Details:**
+            - **Backend Image:** `${{ env.PRODUCTION_REGISTRY }}/${{ env.BACKEND_IMAGE }}:production-latest`
+            - **Frontend Image:** `${{ env.PRODUCTION_REGISTRY }}/${{ env.FRONTEND_IMAGE }}:production-latest`
+            - **Commit SHA:** `${{ github.sha }}`
+            - **Branch:** `${{ github.ref_name }}`
+            - **Workflow:** `${{ github.workflow }}`
+            - **Run ID:** `${{ github.run_id }}`
+            
+            **🔗 Links:**
+            - [View Workflow Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - [View Commit](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+            
+            **⚡ Action Required:**
+            Please review the deployment details above and comment:
+            - `approved` or `lgtm` to proceed with production deployment
+            - `denied` or `no` to cancel the deployment
+            
+            **🎯 Target Environment:** Azure Container Apps (Production)
 
       - name: Login to Azure
         uses: azure/login@v1
